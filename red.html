@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Red Neuronal - Marlon Ayala</title>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: Arial, sans-serif;
+      background: #ecf0f1;
+      padding: 20px;
+    }
+    #root { max-width: 800px; margin: 0 auto; }
+    h1 { text-align: center; margin-bottom: 24px; color: #333; }
+    .seccion {
+      background: #fff;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .seccion h2 { font-size: 18px; color: #2c3e50; margin-bottom: 16px; }
+    .matriz h3 { font-size: 14px; color: #7f8c8d; margin: 12px 0 6px; }
+    .fila { display: flex; justify-content: center; }
+    .celda {
+      width: 48px;
+      height: 48px;
+      margin: 2px;
+      border-radius: 6px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-weight: bold;
+      font-size: 16px;
+    }
+    .celda.a { background: #3498db; color: #fff; }
+    .celda.b { background: #e67e22; color: #fff; }
+    .celda.c { background: #27ae60; color: #fff; }
+    .resultado {
+      margin-top: 12px;
+      padding: 12px;
+      background: #f7f9fa;
+      border-radius: 8px;
+      font-size: 15px;
+      color: #2c3e50;
+      text-align: center;
+    }
+    .prediccion {
+      margin-top: 12px;
+      padding: 16px;
+      background: #2c3e50;
+      color: #fff;
+      border-radius: 8px;
+      font-size: 18px;
+      font-weight: bold;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    function MatrizView({ data, clase, titulo }) {
+      const rows = Array.isArray(data[0]) ? data : [data];
+      return (
+        <div className="matriz">
+          <h3>{titulo}</h3>
+          {rows.map((fila, i) => (
+            <div className="fila" key={i}>
+              {fila.map((num, j) => (
+                <div className={`celda ${clase}`} key={j}>
+                  {Number(num).toFixed ? Number(num).toFixed(2) : num}
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    function App() {
+      const [edgeResult, setEdgeResult] = useState('');
+      const [matrizResult, setMatrizResult] = useState(null);
+      const [cargando, setCargando] = useState(true);
+
+      useEffect(() => {
+        async function runNeuralNetwork() {
+          await tf.ready();
+
+          // Multiplicación de matrices A(3x3) * B(3x2)
+          const A = tf.tensor([
+            [1, 2, 3],
+            [4, 5, 6],
+            [7, 8, 9]
+          ]);
+          const B = tf.tensor([
+            [9, 8],
+            [6, 5],
+            [3, 2]
+          ]);
+          const C = tf.matMul(A, B);
+          setMatrizResult(C.arraySync());
+
+          // Red neuronal con una capa oculta
+          const input = tf.tensor1d([1, 2, 3]);
+          const weightsHidden = tf.tensor2d([
+            [0.1, 0.4],
+            [0.2, 0.5],
+            [0.3, 0.6]
+          ]);
+          const biasesHidden = tf.tensor1d([0.1, 0.2]);
+          const weightsOutput = tf.tensor1d([0.7, 0.8]);
+          const biasesOutput = tf.tensor1d([0.3]);
+
+          const hiddenInput = tf.add(tf.dot(input, weightsHidden), biasesHidden);
+          const hiddenOutput = tf.relu(hiddenInput);
+          const result_L1 = await hiddenOutput.data();
+          console.log('result Layer 1:', result_L1);
+
+          const outputInput = tf.add(tf.dot(hiddenOutput, weightsOutput), biasesOutput);
+          const output = tf.sigmoid(outputInput);
+
+          const result = await output.data();
+          console.log('result:', result);
+          const predictionValue = result[0].toFixed(4);
+          console.log('predictionValue:', predictionValue);
+          setEdgeResult(`Predicción Local: ${predictionValue}`);
+          setCargando(false);
+        }
+        runNeuralNetwork();
+      }, []);
+
+      const A = [
+        [1, 2, 3],
+        [4, 5, 6],
+        [7, 8, 9]
+      ];
+      const B = [
+        [9, 8],
+        [6, 5],
+        [3, 2]
+      ];
+
+      return (
+        <div>
+          <h1>Red Neuronal - MARLON AYALA</h1>
+
+          <div className="seccion">
+            <h2>Multiplicación de Matrices (A × B)</h2>
+            <MatrizView data={A} clase="a" titulo="Matriz A (3x3)" />
+            <MatrizView data={B} clase="b" titulo="Matriz B (3x2)" />
+            {matrizResult ? (
+              <MatrizView data={matrizResult} clase="c" titulo="Resultado C = A × B (3x2)" />
+            ) : (
+              <div className="resultado">Calculando...</div>
+            )}
+          </div>
+
+          <div className="seccion">
+            <h2>Red Neuronal</h2>
+            {cargando ? (
+              <div className="resultado">Ejecutando red neuronal...</div>
+            ) : (
+              <div className="prediccion">{edgeResult}</div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
